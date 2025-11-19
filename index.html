@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Meter de la Clase</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            background-color: #0f172a; /* Slate 900 */
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        /* Personalización del Scrollbar para modo oscuro */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111827; }
+        ::-webkit-scrollbar-thumb { background: #4c1d95; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6d28d9; }
+        
+        /* Efecto cristal (Glassmorphism) */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/"
+  }
+}
+</script>
+</head>
+<body class="min-h-screen flex flex-col items-center py-10 px-4 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
+
+    <!-- Encabezado -->
+    <header class="mb-10 text-center relative z-10">
+        <div class="absolute -inset-1 bg-gradient-to-r from-pink-600 to-purple-600 rounded-lg blur opacity-20 animate-pulse"></div>
+        <h1 class="relative text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 drop-shadow-2xl tracking-tight">
+            VIBE METER
+        </h1>
+        <p class="mt-3 text-xl text-slate-300 font-medium">
+            ¿Quién tiene el mejor Vibe hoy? ✨
+        </p>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="w-full max-w-md flex flex-col gap-8 relative z-10">
+        
+        <!-- Tarjeta del Formulario -->
+        <div class="glass-panel p-6 rounded-2xl shadow-[0_0_15px_rgba(168,85,247,0.2)]">
+            <form id="vibeForm" class="flex flex-col gap-6">
+                
+                <!-- Entrada Nombre -->
+                <div class="flex flex-col gap-2">
+                    <label class="text-cyan-300 font-bold tracking-wider uppercase text-sm">Tu Nombre</label>
+                    <input type="text" id="nombre" placeholder="Ej. Alex el Fiestero" maxlength="20" required
+                        class="bg-slate-900/80 border border-slate-600 text-white p-3 rounded-lg focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all placeholder-slate-500">
+                </div>
+
+                <!-- Slider Vibe -->
+                <div class="flex flex-col gap-2">
+                    <div class="flex justify-between items-end">
+                        <label class="text-purple-300 font-bold tracking-wider uppercase text-sm">Tu Nivel de Vibe</label>
+                        <span id="vibeValueDisplay" class="text-2xl font-black text-white drop-shadow-lg">50 😐</span>
+                    </div>
+                    <input type="range" id="vibeRange" min="0" max="100" value="50"
+                        class="w-full h-3 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500 hover:accent-purple-400 transition-all">
+                    <div class="flex justify-between text-xs text-slate-500 font-mono">
+                        <span>Bajón Total</span>
+                        <span>Vibe Máximo</span>
+                    </div>
+                </div>
+
+                <!-- Botón Enviar -->
+                <button type="submit" id="submitBtn"
+                    class="w-full py-4 rounded-xl font-black text-xl tracking-widest transition-all duration-300 transform bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-[0_0_20px_rgba(192,38,211,0.5)] hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(192,38,211,0.7)] hover:from-purple-500 hover:to-pink-500 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                    ENVIAR VIBE 🚀
+                </button>
+            </form>
+        </div>
+
+        <!-- Lista de Clasificación -->
+        <div class="w-full">
+            <h2 class="text-2xl font-bold mb-4 text-center text-transparent bg-clip-text bg-gradient-to-r from-slate-200 to-slate-400">
+                Clasificación en Vivo
+            </h2>
+            
+            <!-- Mensaje de configuración -->
+            <div id="setupMsg" class="text-center text-red-400 border border-red-500/30 bg-red-900/20 p-4 rounded-lg hidden mb-4">
+                ⚠️ <strong>¡Falta Configuración!</strong><br>
+                Abre el código y rellena <code>URL_SUPABASE</code> y <code>CLAVE_SUPABASE</code>.
+            </div>
+
+            <div id="vibeList" class="flex flex-col gap-3 max-h-96 overflow-y-auto pr-2 pb-4">
+                <!-- Aquí se insertarán los datos dinámicamente -->
+                <div class="text-center py-10 text-slate-500 animate-pulse">Cargando el flow...</div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="mt-20 text-slate-600 text-sm font-mono">
+        Clase Vibe Check 2024 ©
+    </footer>
+
+    <!-- LÓGICA JAVASCRIPT -->
+    <script>
+        // --- 1. CONFIGURACIÓN (RELLENA ESTO) ---
+        const URL_SUPABASE = ""; https://upjvujelizswlpahlcbj.supabase.co
+        const CLAVE_SUPABASE = "";eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVwanZ1amVsaXpzd2xwYWhsY2JqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MDg3MTgsImV4cCI6MjA3OTA4NDcxOH0.dCxkQDqr0LETynYwxZfuJzYhWkr9jFt6kqRCQbFSRwo
+        const TABLA = "clasificacion";
+
+        // --- 2. REFERENCIAS AL DOM ---
+        const form = document.getElementById('vibeForm');
+        const nameInput = document.getElementById('nombre');
+        const rangeInput = document.getElementById('vibeRange');
+        const display = document.getElementById('vibeValueDisplay');
+        const listContainer = document.getElementById('vibeList');
+        const submitBtn = document.getElementById('submitBtn');
+        const setupMsg = document.getElementById('setupMsg');
+        
+        let supabaseClient = null;
+
+        // --- 3. LÓGICA VISUAL (Emojis) ---
+        const getEmoji = (val) => {
+            if (val < 20) return '💀';
+            if (val < 40) return '🌧️';
+            if (val < 60) return '😐';
+            if (val < 80) return '😎';
+            return '🔥';
+        };
+
+        // Evento: Mover el slider
+        rangeInput.addEventListener('input', (e) => {
+            const val = e.target.value;
+            display.textContent = `${val} ${getEmoji(val)}`;
+        });
+
+        // --- 4. LÓGICA SUPABASE ---
+        async function initApp() {
+            // Verificar credenciales
+            if (!URL_SUPABASE || !CLAVE_SUPABASE) {
+                setupMsg.classList.remove('hidden');
+                listContainer.innerHTML = ''; 
+                submitBtn.disabled = true;
+                return;
+            }
+
+            // Inicializar cliente
+            try {
+                supabaseClient = supabase.createClient(URL_SUPABASE, CLAVE_SUPABASE);
+                
+                // Cargar datos iniciales
+                await loadVibes();
+
+                // Suscribirse a cambios en tiempo real
+                supabaseClient
+                    .channel('public:clasificacion')
+                    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: TABLA }, () => {
+                        loadVibes(); // Recargar lista cuando alguien envíe algo
+                    })
+                    .subscribe();
+
+            } catch (error) {
+                console.error("Error inicializando Supabase:", error);
+            }
+        }
+
+        // Cargar y renderizar lista
+        async function loadVibes() {
+            if (!supabaseClient) return;
+
+            const { data, error } = await supabaseClient
+                .from(TABLA)
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error("Error cargando datos:", error);
+                return;
+            }
+
+            renderList(data || []);
+        }
+
+        // Renderizar HTML de la lista
+        function renderList(vibes) {
+            listContainer.innerHTML = ''; // Limpiar lista actual
+
+            // Ordenar por puntuación descendente (los mejores vibes primero)
+            const sortedVibes = vibes.sort((a, b) => b.puntuacion - a.puntuacion);
+
+            if (sortedVibes.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="text-center py-10 text-slate-500 italic border border-dashed border-slate-700 rounded-xl">
+                        Nadie ha enviado vibes todavía... <br/> ¿Serás el primero?
+                    </div>`;
+                return;
+            }
+
+            sortedVibes.forEach((vibe, index) => {
+                const score = vibe.puntuacion;
+                
+                // Estilos dinámicos según puntuación
+                let scoreClass = 'text-slate-400';
+                let barGradient = 'bg-slate-600';
+                
+                if (score >= 80) {
+                    scoreClass = 'text-red-400 drop-shadow-[0_0_5px_rgba(248,113,113,0.8)]';
+                    barGradient = 'bg-gradient-to-r from-orange-500 to-red-500';
+                } else if (score >= 50) {
+                    scoreClass = 'text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]';
+                    barGradient = 'bg-gradient-to-r from-blue-500 to-cyan-500';
+                }
+
+                // Crear elemento HTML
+                const itemHtml = `
+                <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700/50 flex items-center gap-4 hover:bg-slate-800 transition-colors">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center font-bold text-slate-300 border border-slate-700">
+                        #${index + 1}
+                    </div>
+                    <div class="flex-grow">
+                        <div class="flex justify-between items-baseline mb-1">
+                            <span class="font-bold text-lg text-white truncate max-w-[140px]">${escapeHtml(vibe.nombre)}</span>
+                            <span class="font-mono font-black text-xl ${scoreClass}">
+                                ${score}
+                            </span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
+                            <div class="h-full ${barGradient} transition-all duration-1000 ease-out" style="width: ${score}%"></div>
+                        </div>
+                    </div>
+                </div>`;
+                
+                listContainer.insertAdjacentHTML('beforeend', itemHtml);
+            });
+        }
+
+        // Enviar Formulario
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!supabaseClient) return;
+
+            const nombre = nameInput.value.trim();
+            const puntuacion = parseInt(rangeInput.value);
+
+            if (!nombre) return;
+
+            // Estado de carga
+            const originalBtnText = submitBtn.innerText;
+            submitBtn.disabled = true;
+            submitBtn.innerText = "ENVIANDO...";
+
+            const { error } = await supabaseClient
+                .from(TABLA)
+                .insert([{ nombre, puntuacion }]);
+
+            if (error) {
+                alert("Error al enviar: " + error.message);
+            } else {
+                nameInput.value = ''; // Limpiar campo
+                // Nota: No limpiamos el slider para permitir reajustes rápidos
+            }
+
+            // Restaurar botón
+            submitBtn.disabled = false;
+            submitBtn.innerText = originalBtnText;
+        });
+
+        // Función seguridad XSS básica
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Arrancar la app
+        initApp();
+
+    </script>
+</body>
+</html>
